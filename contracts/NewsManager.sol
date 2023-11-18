@@ -44,6 +44,23 @@ contract NewsManager {
         currentReportsRequired = calculateVoteRequired();
     }
 
+    receive() external payable onlyOwner {
+        currentReward = calculateReward();
+        currentPrice = calculatePrice();
+    }
+
+    function getBalance() external view returns(uint) {
+        return address(this).balance;
+    }
+
+    function countValidator() external view returns (uint){
+        return validators.count();
+    }
+
+    function searchValidator(address validatorToSearch) external view returns (bool present, uint index){
+        return validators.findValidator(validatorToSearch);
+    }
+
     function calculateReward() internal view returns (uint) {
         return address(this).balance / (validators.length * 5000);
     }
@@ -56,20 +73,35 @@ contract NewsManager {
         return (validators.length * 2) / 3;
     }
 
-    function searchValidator(address validatorToSearch) external view returns (bool present, uint index){
-        return validators.findValidator(validatorToSearch);
+    function addNews(address source, string memory title, uint daysToNow, uint validationsRequired) external returns(bool added){
+        uint oldLength = news.length;
+        address[] memory validatorsToAdd;
+        News memory newsToAdd = News({
+            source: source,
+            title: title,
+            expireDate: (block.timestamp + (daysToNow * 1 days)) * 1000,
+            validationsRequired: validationsRequired,
+            validators: validatorsToAdd,
+            valid: false
+        });
+
+        news.push(newsToAdd);
+        require(news.length == oldLength + 1, "Impossible to add the News");
+        added = true;
     }
 
-    function countValidator() external view returns (uint){
-        return validators.count();
+    function findNews(address newsSource) public view returns(bool present, uint index){
+        index = news.length;
+        for (uint newsIdx = 0; newsIdx < news.length; newsIdx++) {
+            if(news[newsIdx].source == newsSource){
+                present = true;
+                index = newsIdx;
+            }
+        }
     }
 
-    receive() external payable onlyOwner {
-        currentReward = calculateReward();
-        currentPrice = calculatePrice();
-    }
 
-    function addValidator() external payable returns(bool added){
+    function addValidator() external payable returns(bool added) {
         (bool present, ) = validators.findValidator(msg.sender);
         require(present == false, "Validator already present");
         require(msg.value >= currentPrice, "Insufficent value");
@@ -80,6 +112,16 @@ contract NewsManager {
         currentPrice = calculatePrice();
         currentReportsRequired = calculateVoteRequired();
         added = true;
+    }
+
+    function reportValidator(address validatorToReport) onlyValidators external returns(bool removed){
+        ( , uint index ) = validators.findValidator(validatorToReport);
+
+        validatorReports[validatorToReport] = validatorReports[validatorToReport] + 1;
+        if(validatorReports[validatorToReport] >= currentReportsRequired){
+            ( , removed) = removeValidator(index);
+        }
+
     }
 
     function removeValidator(uint index) internal returns(bool removedFromNews, bool removed){
@@ -103,20 +145,7 @@ contract NewsManager {
         currentReward = calculateReward();
         currentPrice = calculatePrice();
         currentReportsRequired = calculateVoteRequired();
-
         removed = true;
-    }
-
-
-    function reportValidator(address validatorToReport) onlyValidators external returns(bool removed){
-        ( , uint index ) = validators.findValidator(validatorToReport);
-
-        validatorReports[validatorToReport] = validatorReports[validatorToReport] + 1;
-        if(validatorReports[validatorToReport] >= currentReportsRequired){
-            ( , removed) = removeValidator(index);
-            removed = true;
-        }
-
     }
 
     function validateNews(address sourceToValidate) onlyValidators external returns(bool added, bool rewarded) {
@@ -132,55 +161,25 @@ contract NewsManager {
 
         bool isValid = news[index].validators.checkValidation(news[index].validationsRequired);
         if (news[index].valid != isValid) {
-            rewardValidator(news[index]); // Prova di pagamento
-            news[index].valid = isValid; //MODIFICATO
-            rewarded = true;
+            rewarded = rewardValidator(news[index]);
+            news[index].valid = isValid;
         }
     }
 
     function rewardValidator(News memory validNews) private returns (bool rewarded){
-        require(validNews.validators.count() * currentReward < address(this).balance, "Not enough ETH to reward validators. Please provide funds to the contract.");
+        uint payment = validNews.validators.length * currentReward;
+        require(payment < address(this).balance, "Not enough ETH to reward validators. Please provide funds to the contract.");
+        uint oldBalance = address(this).balance;
         
         for (uint validatorIdx = 0; validatorIdx < validNews.validators.length; validatorIdx++) {
             payable(validNews.validators[validatorIdx]).transfer(currentReward);
             validatorRewards[validNews.validators[validatorIdx]] += currentReward;
-            totalRewards += currentReward;
         }
 
+        totalRewards += payment;
+        require(oldBalance >= address(this).balance + payment, "Rewards not transferred.");
         rewarded = true;
-    }
 
-    function findNews(address newsSource) internal view returns(bool present, uint index){
-        present = false;
-        index = news.length;
-        for (uint newsIdx = 0; newsIdx < news.length; newsIdx++) {
-            if(news[newsIdx].source == newsSource){
-                present = true;
-                index = newsIdx;
-            }
-        }
-        return (present, index);
-    }
-
-    function addNews(address source, string memory title, uint daysToNow, uint validationsRequired) external returns(bool added){
-        uint oldLength = news.length;
-        address[] memory validatorsToAdd;
-        News memory newsToAdd = News({
-            source: source,
-            title: title,
-            expireDate: (block.timestamp + (daysToNow * 1 days)) * 1000,
-            validationsRequired: validationsRequired,
-            validators: validatorsToAdd,
-            valid: false
-        });
-
-        news.push(newsToAdd);
-        require(news.length == oldLength + 1, "Impossible to add the News");
-        added = true;
-    }
-
-    function getBalance() external view returns(uint) {
-        return address(this).balance;
-    }
+    } 
 
 }
