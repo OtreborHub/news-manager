@@ -1,18 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.2 <0.9.0;
-import "./NewsUtils.sol";
+import "./NewsManagerUtils.sol";
 
 contract NewsManager {
 
-    using NewsUtils for address[];    
-    struct News {
-        address source;
-        string title;
-        uint expireDate;
-        address[] validators;
-        uint validationsRequired;
-        bool valid; 
-    }
+    using ValidatorUtils for address[];    
+    using NewsUtils for NewsUtils.News[];
 
     address public owner; 
     address[] public validators;
@@ -22,7 +15,7 @@ contract NewsManager {
     uint public currentReportsRequired;
     mapping(address => uint) public validatorRewards;
     mapping(address => uint) public validatorReports;
-    News[] public news;
+    NewsUtils.News[] public news;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Caller must be Owner of the contract");
@@ -53,12 +46,26 @@ contract NewsManager {
         return address(this).balance;
     }
 
-    function countValidator() external view returns (uint){
+    function countValidators() external view returns (uint){
         return validators.count();
     }
 
-    function searchValidator(address validatorToSearch) external view returns (bool present, uint index){
-        return validators.findValidator(validatorToSearch);
+    function countNewsValidators(address source) external view returns (uint) {
+        (NewsUtils.News memory newsFound, , ) = news.findNews(source);
+        return newsFound.validators.count();
+    }
+
+    function searchNews(address source) external view returns(bool present, uint index){
+        (, present, index) = news.findNews(source);
+    }
+
+    function searchValidator(address validator) external view returns (bool present, uint index){
+        return validators.findValidator(validator);
+    }
+
+    function newsValidators(address source) external view returns (address[] memory) {
+        (NewsUtils.News memory foundNews, , ) = news.findNews(source);
+        return foundNews.validators;
     }
 
     function calculateReward() internal view returns (uint) {
@@ -76,7 +83,7 @@ contract NewsManager {
     function addNews(address source, string memory title, uint daysToNow, uint validationsRequired) external returns(bool added){
         uint oldLength = news.length;
         address[] memory validatorsToAdd;
-        News memory newsToAdd = News({
+        NewsUtils.News memory newsToAdd = NewsUtils.News({
             source: source,
             title: title,
             expireDate: (block.timestamp + (daysToNow * 1 days)) * 1000,
@@ -90,18 +97,7 @@ contract NewsManager {
         added = true;
     }
 
-    function findNews(address newsSource) public view returns(bool present, uint index){
-        index = news.length;
-        for (uint newsIdx = 0; newsIdx < news.length; newsIdx++) {
-            if(news[newsIdx].source == newsSource){
-                present = true;
-                index = newsIdx;
-            }
-        }
-    }
-
-
-    function addValidator() external payable returns(bool added) {
+    function addValidator() external payable returns(bool added){
         (bool present, ) = validators.findValidator(msg.sender);
         require(present == false, "Validator already present");
         require(msg.value >= currentPrice, "Insufficent value");
@@ -145,35 +141,36 @@ contract NewsManager {
         currentReward = calculateReward();
         currentPrice = calculatePrice();
         currentReportsRequired = calculateVoteRequired();
+
         removed = true;
     }
 
     function validateNews(address sourceToValidate) onlyValidators external returns(bool added, bool rewarded) {
-        (bool newsPresent, uint index) = findNews(sourceToValidate);
+        (NewsUtils.News memory newsFound, bool newsPresent, uint index) = news.findNews(sourceToValidate);
         require(newsPresent == true, "Story not found");
-        require(news[index].expireDate > (block.timestamp * 1000), "This story cannot be validate anymore: expireDate is passed");
-        require(news[index].valid == false, "Story already valid");
+        require(newsFound.expireDate > (block.timestamp * 1000), "This story cannot be validate anymore: expireDate is passed");
+        require(newsFound.valid == false, "Story already valid");
 
-        (bool isNewsValidator, ) = news[index].validators.findValidator(msg.sender);
+        (bool isNewsValidator, ) = newsFound.validators.findValidator(msg.sender);
         require(isNewsValidator == false, "The sender already is a validator of this news."); 
         news[index].validators.push(msg.sender);
         added = true;
 
-        bool isValid = news[index].validators.checkValidation(news[index].validationsRequired);
-        if (news[index].valid != isValid) {
-            rewarded = rewardValidator(news[index]);
+        bool isValid = news[index].validators.checkValidation(newsFound.validationsRequired);
+        if (newsFound.valid != isValid) {
+            rewarded = rewardValidators(news[index].validators);
             news[index].valid = isValid;
         }
     }
 
-    function rewardValidator(News memory validNews) private returns (bool rewarded){
-        uint payment = validNews.validators.length * currentReward;
+    function rewardValidators(address[] memory validatorsToReward) private returns (bool rewarded){
+        uint payment = validatorsToReward.length * currentReward;
         require(payment < address(this).balance, "Not enough ETH to reward validators. Please provide funds to the contract.");
         uint oldBalance = address(this).balance;
         
-        for (uint validatorIdx = 0; validatorIdx < validNews.validators.length; validatorIdx++) {
-            payable(validNews.validators[validatorIdx]).transfer(currentReward);
-            validatorRewards[validNews.validators[validatorIdx]] += currentReward;
+        for (uint validatorIdx = 0; validatorIdx < validatorsToReward.length; validatorIdx++) {
+            payable(validatorsToReward[validatorIdx]).transfer(currentReward);
+            validatorRewards[validatorsToReward[validatorIdx]] += currentReward;
         }
 
         totalRewards += payment;

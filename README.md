@@ -1,11 +1,12 @@
 # news-manager
 NewsManager è un Smart Contract realizzato per Start2Impact University. 
 
-Indirizzo del contratto [Sepolia Testnet]: 0xe140384C27f41C0f7dd30713e763e1bD94E90A35
+[GitHub]: https://github.com/OtreborHub/news-manager\
+[Sepolia Testnet]: https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860
 
 Lo smart contract ha lo scopo gestire il processo di pubblicazione e la validazione delle notizie online, certificandone la validità per mezzo la tecnologia Blockchain e automatizzando i pagamenti verso gli utenti validatori.
 
-Il contratto utilizza una struct per il modello dati delle news (News) e una libreria la gestione dei validatori e della validazione (NewsUtils). Capiamo da cosa è composto ed in seguito capiremo come utilizzarlo al meglio.
+Il contratto utilizza una libreria (NewsManagerUtils) che contiene la struttura per il modello dati delle news (News) e alcuni metodi di utilità per validatori e news. Capiamo prima da cosa è composto il contratto principale ed in seguito capiremo come utilizzarlo al meglio.
 
  <font size="4">**Sommario delle variabili e strutture**</font>
 
@@ -22,7 +23,7 @@ Lo NewsManager ha la seguenti variabili storage
     mapping (address => uint) validatorReports 
 	News[] news
 
-dove:
+dove
 - **balance** è il bilancio del contratto
 - **owner** è il proprietario del contratto
 - **validators** rappresenta la lista degli utenti validatori
@@ -34,7 +35,7 @@ dove:
 - **validatorReports** è una mappa che traccia la quantità di segnalazioni ricevute per ciascuno validatore
 - **news** è la lista di oggetti News da validare
 
-L'oggetto News, rappresenta l'item da validare ed è una struct composta da:
+L'oggetto News, rappresenta l'item da validare ed è una struct composta da
 
 	address source
 	string title
@@ -43,7 +44,7 @@ L'oggetto News, rappresenta l'item da validare ed è una struct composta da:
 	uint256 validationsRequired
 	bool valid
 
-dove:
+dove
 
 - **source** è l'indirizzo della notizia.
 - **title** è il titolo della notizia. 
@@ -71,11 +72,13 @@ Vengono aggiornate la mappa validatorRewards e la variabile totalRewards.
 (vedi *f. rewardValidator*)
 
 
-NewsManager utilizza la libreria NewsUtils per gli array di address, in particolare per gli array di validatori. NewsUtils contiene 3 funzioni: 
+NewsManager utilizza la libreria NewsManagerUtils per funzioni di utilità: in particolare usa ValidatorUtils per gli array di validatori e NewsUtils per gli array di News. ValidatorUtils contiene 3 funzioni mentre NewsUtils contiene la struttura delle News e una singola funzione di ricerca della News: 
 
 - **count**: restituisce la quantità di validatori nell'array validators
-- **findValidatory**: verifica se l'indirizzo in input appartiene alla lista dei validatori.
+- **findValidator**: verifica se l'indirizzo in input appartiene alla lista dei validatori. In caso positivo verranno restituiti in output un booleano che ne indica la presenza e l'indice dell'item trovato nell'array di riferimento.
 - **checkValidation**: verifica se la quantità di validatori presenti in una specifica News è uguale o maggiore al numero (di validazioni richieste per quella specifica News) passato in input.
+- **findNews**: verifica se l'indirizzo in input appartiene alla lista delle News. In caso positivo verranno restituiti in output i dati della notizia, un booleano che ne indica la presenza e l'indice dell'item trovato nell'array di riferimento.
+
 
 Il valore della singola ricompensa è calcolato come 
 
@@ -91,12 +94,14 @@ I voti richiesti per il ban di un validatore rappresenta i 2/3 dei validatori to
 
 	currentReportsRequired = ( 2 * n° di validatori ) / 3
 
+Sarà sempre possibile effettuare ricerche su validatori, news, ricompense distrubuite e segnalazioni registrate.
+
 <br></br>
  <font size="4">**Casi d'uso**</font>
 
 Per mostrare i casi d'uso possiamo riferirci alle prime quattordici transazioni effettuate sul contratto, consultabili al seguente indirizzo:
 
-https://sepolia.etherscan.io/address/0xe140384C27f41C0f7dd30713e763e1bD94E90A35
+https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860
 
 Di seguito gli accounti coinvolti con i relativi ruoli
 
@@ -130,7 +135,7 @@ source 0x1994E5e31D4b3e4430821F4C53342882cF94ED54\
 
 La news diventa valida e il contratto invia le ricompense ai validatori coinvolti nella validazione della notizia:
 
-https://sepolia.etherscan.io/address/0xe140384C27f41C0f7dd30713e763e1bD94E90A35#internaltx
+https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860#internaltx
 
 Le prime due transazioni (dal basso) sono i pagamenti effettuati verso gli account Validator e Validator2
 
@@ -164,9 +169,14 @@ source 0x19944fe9D436C1992d096E48265c9df008c2eb13
 > **Validazione News2 (2° validazione)**\
 validator Validator2\
 source 0x19944fe9D436C1992d096E48265c9df008c2eb13\
-La News diventa valida e i validatori vengono pagati currentReward calcolato al momento del ban del validatore.
 
-**AGGIUNGERE FONDI AL CONTRATTO**
+Come nel caso precedente dopo la seconda validazione la notizia diventa valida e il contratto invia le ricompense ai validatori coinvolti nel processo 
+
+https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860#internaltx
+
+I primi due record rappresentano i pagamenti per questa fase di test.
+
+**AGGIUNGERE FONDI AL CONTRATTO** (14° transazione)
 > **Transazione semplice con value**\
 address Owner > 0.5 ETH: la funzione receive trasferisce i fondi ricevuto al bilancio del contratto
 

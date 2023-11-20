@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.2 <0.9.0;
 
-library NewsUtils {
-    
+library ValidatorUtils {
+
     function count(address[] memory self) internal pure returns(uint) {
         return self.length;
     }
@@ -22,4 +22,29 @@ library NewsUtils {
     function checkValidation(address[] memory self, uint requiredValidations) internal pure returns(bool) {
         return requiredValidations <= self.length ? true: false;
     }
+
+}
+
+library NewsUtils {
+
+    struct News {
+        address source;
+        string title;
+        uint expireDate;
+        address[] validators;
+        uint validationsRequired;
+        bool valid; 
+    }
+
+    function findNews(News[] storage self, address source) internal view returns(News memory newsFound, bool present, uint index){
+        index = self.length;
+        for (uint newsIdx = 0; newsIdx < self.length; newsIdx++) {
+            if(self[newsIdx].source == source){
+                newsFound = self[newsIdx];
+                present = true;
+                index = newsIdx;
+            }
+        }
+    }
+
 }
