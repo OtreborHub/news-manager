@@ -105,7 +105,7 @@ https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860
 
 Di seguito gli accounti coinvolti con i relativi ruoli
 
-![image](/Metamask.png)
+![image](./Metamask.png)
 
 **VALIDAZIONE** (prime 6 transazioni)
 
