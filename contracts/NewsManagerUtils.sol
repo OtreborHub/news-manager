@@ -7,20 +7,17 @@ library ValidatorUtils {
         return self.length;
     }
 
-    function findValidator(address[] memory self, address validator) internal pure returns(bool present, uint index) {
-        index = self.length;
-        
+    function findValidator(address[] memory self, address validator) internal pure returns(bool present, uint index) {     
         for(uint idx = 0; idx < self.length; idx++){
             if(self[idx] == validator){
-                index = idx;
-                present = true;
+                return (true, idx);
             }
         }
 
     }
 
     function checkValidation(address[] memory self, uint requiredValidations) internal pure returns(bool) {
-        return requiredValidations <= self.length ? true: false;
+        return requiredValidations <= self.length;
     }
 
 }
@@ -31,8 +28,8 @@ library NewsUtils {
         address source;
         string title;
         uint expireDate;
-        address[] validators;
         uint validationsRequired;
+        address[] validators;
         bool valid; 
     }
 
@@ -40,9 +37,7 @@ library NewsUtils {
         index = self.length;
         for (uint newsIdx = 0; newsIdx < self.length; newsIdx++) {
             if(self[newsIdx].source == source){
-                newsFound = self[newsIdx];
-                present = true;
-                index = newsIdx;
+                return (self[newsIdx], true, newsIdx);
             }
         }
     }
