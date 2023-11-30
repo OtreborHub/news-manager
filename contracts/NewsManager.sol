@@ -37,9 +37,10 @@ contract NewsManager {
         currentReportsRequired = calculateVoteRequired();
     }
 
-    receive() external payable onlyOwner {
+    function addFunds() external payable onlyOwner {
+        require(msg.value > 0, "Add value to the transaction");
         currentReward = calculateReward();
-        currentPrice = calculatePrice();
+        currentPrice = calculatePrice(); 
     }
 
     function getBalance() external view returns(uint) {
@@ -97,12 +98,12 @@ contract NewsManager {
         added = true;
     }
 
-    function addValidator() external payable returns(bool added){
-        (bool present, ) = validators.findValidator(msg.sender);
+    function addValidator(address validatorAddress) onlyValidators external payable returns(bool added){
+        (bool present, ) = validators.findValidator(validatorAddress);
         require(present == false, "Validator already present");
         require(msg.value >= currentPrice, "Insufficent value");
         
-        validators.push(msg.sender);
+        validators.push(validatorAddress);
         
         currentReward = calculateReward();
         currentPrice = calculatePrice();

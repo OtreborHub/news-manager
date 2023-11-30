@@ -2,7 +2,7 @@
 NewsManager è un Smart Contract realizzato per Start2Impact University. 
 
 [GitHub]: https://github.com/OtreborHub/news-manager\
-[Sepolia Testnet]: https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860
+[Sepolia Testnet]: https://sepolia.etherscan.io/address/0x95ac1706B58dA365e4c0b87ad3ea0C049F78Aec2
 
 Lo smart contract ha lo scopo gestire il processo di pubblicazione e la validazione delle notizie online, certificandone la validità per mezzo la tecnologia Blockchain e automatizzando i pagamenti verso gli utenti validatori.
 
@@ -40,8 +40,8 @@ L'oggetto News, rappresenta l'item da validare ed è una struct composta da
 	address source
 	string title
 	uint expireData
+	uint validationsRequired
 	address[] validators
-	uint256 validationsRequired
 	bool valid
 
 dove
@@ -58,11 +58,11 @@ dove
 
 - **constructor** : costruttore del contratto. Al deploy viene riempito il bilancio del contratto e calcolati i premi e i prezzi di ingresso come validatori. Il msg.sender viene utilizzato per aggiornare la variabile owner e l'array dei validator, facendo del proprietario il primo dei validatori.
 
-- **receive**: permette all'owner di aggiungere ETH al bilancio del contratto con una semplice transazione.
+- **addFunds**: permette all'owner di aggiungere ETH al bilancio del contratto con una semplice transazione, aggiornando currentPrice e currentReward
 
 - **addNews**: permette a qualunque utente di inserire una notizia pagando il solo costo della scrittura su blockchain. Per aggiungere una notizia sarà necessario passare alla funzione l'address della notizia, il titolo, il numero di giorni dal momento dell'inserimento entro cui la notizia può essere validata, e il numero di validazioni richieste.
 
-- **addValidator** : permette di iscrivere un utente alla lista di validators al costo in wei indicato da currentPrice. Ricalcolo di currentReward, currentPrice e currentReportsRequired sulla base del nuovo numero di validatori.
+- **addValidator** : permette ai validatori di iscrivere un utente alla lista di validators al costo in wei indicato da currentPrice. Ricalcolo di currentReward, currentPrice e currentReportsRequired sulla base del nuovo numero di validatori.
 
 - **reportValidator**: permette a qualunque utente validatore di segnalare un altro utente validatore. Il numero di segnalazioni ricevute per validatore è salvato nella mappa validatorReports. Quando il numero di segnalazioni ricevute eguaglia currentReportsRequire l'utente validatore viene rimosso dalla lista dei validatori. 
 Nota: quando un utente validatore viene rimosso dalla lista dei validatori, vengono rimosse anche tutte le sue validazioni dalle notizie non valide. (vedi *f. removeValidator*)
@@ -111,7 +111,7 @@ Di seguito gli accounti coinvolti con i relativi ruoli
 
 > **Deploy**\
 owner 0x28c8F50F67CB8ff0Ee0412e64C64dAdD92E1F01C\
-balance 0.5ETH
+balance 0.05ETH
 
 > **Creazione News**\
 source 0x1994E5e31D4b3e4430821F4C53342882cF94ED54\
@@ -120,14 +120,14 @@ daysToNow 10\
 validationRequired 2
 
 > **Aggiunta Validator**\
-address 0x1482445250eDD8c6079b9D960CF5a53B9C8B360E
+Owner > address 0x1482445250eDD8c6079b9D960CF5a53B9C8B360E
 
 > **Validazione News (1° validazione)** \
 validator Validator\
 source 0x1994E5e31D4b3e4430821F4C53342882cF94ED54
 
 > **Aggiunta Validator2**\
-address 0xCbdCEeF5D5C592244da1fc10be29889920b3a6c7
+Validator > address 0xCbdCEeF5D5C592244da1fc10be29889920b3a6c7
 
 > **Validazione News (2° validazione)**\
 validator Validator2\
@@ -135,13 +135,13 @@ source 0x1994E5e31D4b3e4430821F4C53342882cF94ED54\
 
 La news diventa valida e il contratto invia le ricompense ai validatori coinvolti nella validazione della notizia:
 
-https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860#internaltx
+https://sepolia.etherscan.io/address/0x95ac1706B58dA365e4c0b87ad3ea0C049F78Aec2#internaltx
 
 Le prime due transazioni (dal basso) sono i pagamenti effettuati verso gli account Validator e Validator2
 
 **RIMOZIONE VALIDATORE** ( dalla 7° alla 13° transazione )
 > **Aggiunta BannedValidator**\
-address 0x666659059A10dD88c3eAA0e6eFC50D6dBC04e342\
+Owner > address 0x666659059A10dD88c3eAA0e6eFC50D6dBC04e342\
 currentReportsRequired = 2 (4 validatori presenti)
 
 > **Creazione News**\
@@ -172,14 +172,14 @@ source 0x19944fe9D436C1992d096E48265c9df008c2eb13\
 
 Come nel caso precedente dopo la seconda validazione la notizia diventa valida e il contratto invia le ricompense ai validatori coinvolti nel processo 
 
-https://sepolia.etherscan.io/address/0x44820937c86B83625e6E7bd1Fa461894931C9860#internaltx
+https://sepolia.etherscan.io/address/0x95ac1706B58dA365e4c0b87ad3ea0C049F78Aec2#internaltx
 
 I primi due record rappresentano i pagamenti per questa fase di test.
 
 **AGGIUNGERE FONDI AL CONTRATTO** (14° transazione)
-> **Transazione semplice con value**\
-address Owner > 0.5 ETH: la funzione receive trasferisce i fondi ricevuto al bilancio del contratto
+> **Aggiunta fondi**\
+address Owner > 0.5 ETH: la funzione addFunds trasferisce i fondi ricevuto al bilancio del contratto
 
-Il trasferimento di fondi al contratto è riservato all'owner del contratto mentre la validazione delle notizie e la rimozione dei validatori è riservato agli utenti validatori.
+Il trasferimento di fondi al contratto è riservato all'proprietario del contratto mentre la validazione delle notizie, l'aggiunta e la rimozione dei validatori sono operazioni riservate agli utenti validatori.
 
 
